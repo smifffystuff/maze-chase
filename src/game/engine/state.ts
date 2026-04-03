@@ -1,6 +1,6 @@
 import { INITIAL_LIVES, TILE_SIZE } from '../data/constants';
 import { MAZE_LEVEL_1, MazeGrid } from '../data/maze';
-import { GameState, PlayerState } from './types';
+import { GameState, GhostState, PlayerState } from './types';
 
 // Player starts at the open corridor below the ghost-house (row 23, col 13)
 const PLAYER_START_COL = 13;
@@ -34,20 +34,81 @@ function initialPlayer(): PlayerState {
   };
 }
 
+// Ghost starting positions:
+//   Blinky — just outside the house at the gate; released immediately
+//   Pinky  — centre of ghost house interior; released after 2 s
+//   Inky   — left of centre; released after 4 s
+//   Clyde  — right of centre; released after 6 s
+//
+// Scatter corners (classic layout):
+//   Blinky → top-right   Pinky → top-left
+//   Inky   → bottom-right  Clyde → bottom-left
+function initialGhosts(): GhostState[] {
+  return [
+    {
+      name: 'blinky',
+      tile:  { x: 13, y: 11 },
+      pixel: { x: 13 * TILE_SIZE, y: 11 * TILE_SIZE },
+      direction: 'left',
+      mode: 'scatter',
+      colour: '#ff0000',
+      scatterCorner: { x: 25, y: 0 },
+      inHouse: false,
+      releaseDelay: 0,
+    },
+    {
+      name: 'pinky',
+      tile:  { x: 13, y: 13 },
+      pixel: { x: 13 * TILE_SIZE, y: 13 * TILE_SIZE },
+      direction: 'up',
+      mode: 'scatter',
+      colour: '#ffb8ff',
+      scatterCorner: { x: 2, y: 0 },
+      inHouse: true,
+      releaseDelay: 2000,
+    },
+    {
+      name: 'inky',
+      tile:  { x: 11, y: 13 },
+      pixel: { x: 11 * TILE_SIZE, y: 13 * TILE_SIZE },
+      direction: 'up',
+      mode: 'scatter',
+      colour: '#00ffff',
+      scatterCorner: { x: 27, y: 30 },
+      inHouse: true,
+      releaseDelay: 4000,
+    },
+    {
+      name: 'clyde',
+      tile:  { x: 15, y: 13 },
+      pixel: { x: 15 * TILE_SIZE, y: 13 * TILE_SIZE },
+      direction: 'up',
+      mode: 'scatter',
+      colour: '#ffb852',
+      scatterCorner: { x: 0, y: 30 },
+      inHouse: true,
+      releaseDelay: 6000,
+    },
+  ];
+}
+
 export function createInitialState(maze: MazeGrid = MAZE_LEVEL_1): GameState {
   const { pellets, powerPills } = buildPelletSets(maze);
 
   return {
     player: initialPlayer(),
+    ghosts: initialGhosts(),
     pellets,
     powerPills,
     score: 0,
     lives: INITIAL_LIVES,
     level: 1,
     phase: 'playing',
+    modeElapsed: 0,
+    currentGhostMode: 'scatter',
   };
 }
 
 export function resetPlayer(state: GameState): GameState {
-  return { ...state, player: initialPlayer() };
+  return { ...state, player: initialPlayer(), ghosts: initialGhosts(), modeElapsed: 0, currentGhostMode: 'scatter' };
 }

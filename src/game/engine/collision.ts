@@ -1,12 +1,10 @@
-import { PELLET_SCORE, POWER_PILL_SCORE } from '../data/constants';
+import { PELLET_SCORE, POWER_PILL_SCORE, TILE_SIZE } from '../data/constants';
 import { MazeGrid } from '../data/maze';
 import { GameState } from './types';
 
 export function checkPelletCollection(state: GameState, maze: MazeGrid): GameState {
   const { tile } = state.player;
 
-  // Collect whenever the player occupies a tile — `tile` only advances when the
-  // player crosses a tile centre, so this fires exactly once per tile entered.
   const key = `${tile.x},${tile.y}`;
   const tiletype = maze[tile.y]?.[tile.x];
 
@@ -23,9 +21,28 @@ export function checkPelletCollection(state: GameState, maze: MazeGrid): GameSta
     return { ...state, powerPills, score: state.score + POWER_PILL_SCORE };
   }
 
-  // Ghost-spawn tile — player loses a life (placeholder for ghost collision)
-  if (tiletype === 'ghost-spawn' && state.phase === 'playing') {
-    return { ...state, phase: 'dying' };
+  return state;
+}
+
+const HALF_TILE = TILE_SIZE / 2; // collision threshold in pixels
+
+export function checkGhostCollision(state: GameState): GameState {
+  const { pixel: pp } = state.player;
+  const pcx = pp.x + HALF_TILE;
+  const pcy = pp.y + HALF_TILE;
+
+  for (const ghost of state.ghosts) {
+    if (ghost.mode === 'frightened' || ghost.mode === 'eaten') continue;
+
+    const gcx = ghost.pixel.x + HALF_TILE;
+    const gcy = ghost.pixel.y + HALF_TILE;
+
+    const dx = Math.abs(pcx - gcx);
+    const dy = Math.abs(pcy - gcy);
+
+    if (dx < HALF_TILE && dy < HALF_TILE) {
+      return { ...state, phase: 'dying' };
+    }
   }
 
   return state;

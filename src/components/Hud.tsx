@@ -51,6 +51,7 @@ export function Hud({ score, lives, phase, onRestart }: HudProps) {
           <Button
             variant="outline"
             onClick={onRestart}
+            className="border-yellow-400 text-yellow-400 bg-transparent hover:bg-yellow-400 hover:text-black"
             style={{ fontFamily: "var(--font-display)", fontSize: "10px" }}
           >
             RESTART

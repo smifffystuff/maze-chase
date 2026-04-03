@@ -1,6 +1,6 @@
 import { COLS, ROWS, TILE_SIZE } from '../data/constants';
 import { MazeGrid } from '../data/maze';
-import { Direction, PlayerState } from '../engine/types';
+import { Direction, GhostState, PlayerState } from '../engine/types';
 
 // Wall colour — matches --color-wall token in globals.css
 const WALL_COLOR = '#1a1aff';
@@ -62,6 +62,55 @@ export class Renderer {
     }
   }
 
+  drawGhost(ghost: GhostState): void {
+    const { ctx } = this;
+    const px = ghost.pixel.x;
+    const py = ghost.pixel.y;
+    const cx = px + TILE_SIZE / 2;
+    const r  = TILE_SIZE / 2 - 1;
+
+    ctx.fillStyle = ghost.colour;
+
+    // Body: D-shape (semicircle top + jagged skirt)
+    ctx.beginPath();
+    ctx.arc(cx, py + r, r, Math.PI, 0); // top half-circle
+    // Jagged skirt: three bumps along the bottom
+    const skirtY = py + TILE_SIZE - 1;
+    const bump   = r / 1.5;
+    ctx.lineTo(px + TILE_SIZE - 1, skirtY);
+    ctx.quadraticCurveTo(px + TILE_SIZE - 1 - bump * 0.5, skirtY - bump, px + TILE_SIZE - 1 - bump, skirtY);
+    ctx.quadraticCurveTo(cx - bump * 0.5, skirtY - bump, cx, skirtY);
+    ctx.quadraticCurveTo(px + bump * 0.5, skirtY - bump, px + 1, skirtY);
+    ctx.lineTo(px + 1, py + r);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eyes
+    const eyeOffsetX = r * 0.35;
+    const eyeOffsetY = -r * 0.1;
+    const eyeR = r * 0.28;
+    const pupilR = eyeR * 0.55;
+
+    const [dx, dy] = directionDelta(ghost.direction);
+
+    for (const side of [-1, 1]) {
+      const ex = cx + side * eyeOffsetX;
+      const ey = py + r + eyeOffsetY;
+
+      // White of eye
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dark pupil, shifted in direction of travel
+      ctx.fillStyle = '#1a1aff';
+      ctx.beginPath();
+      ctx.arc(ex + dx * eyeR * 0.5, ey + dy * eyeR * 0.5, pupilR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   drawPlayer(player: PlayerState): void {
     this.frameCounter++;
     const { ctx } = this;
@@ -92,5 +141,15 @@ function directionAngle(dir: Direction): number {
     case 'left':  return Math.PI;
     case 'up':    return -Math.PI / 2;
     default:      return 0;
+  }
+}
+
+function directionDelta(dir: Direction): [number, number] {
+  switch (dir) {
+    case 'right': return [1, 0];
+    case 'left':  return [-1, 0];
+    case 'down':  return [0, 1];
+    case 'up':    return [0, -1];
+    default:      return [1, 0];
   }
 }
