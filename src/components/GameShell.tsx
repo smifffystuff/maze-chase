@@ -14,7 +14,7 @@ export default function GameShell() {
       <canvas
         ref={canvasRef}
         className="max-w-full max-h-full"
-        style={{ imageRendering: "pixelated" }}
+        style={{ imageRendering: "pixelated", touchAction: "none" }}
       />
       <Hud score={score} lives={lives} phase={phase} onRestart={restart} />
       <RotateOverlay />
