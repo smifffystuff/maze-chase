@@ -3,7 +3,7 @@
 import { RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { MAZE_LEVEL_1 } from "@/game/data/maze";
 import { GameState } from "@/game/engine/types";
-import { createInitialState } from "@/game/engine/state";
+import { createInitialState, resetPlayer } from "@/game/engine/state";
 import { tickGame } from "@/game/engine/loop";
 import { createInputManager, InputManager } from "@/game/input/inputManager";
 import { Renderer } from "@/game/render/renderer";
@@ -60,6 +60,7 @@ export function useGameLoop(
 
         renderer.clear();
         renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills);
+        state.ghosts.forEach(g => renderer.drawGhost(g));
         renderer.drawPlayer(state.player);
 
         if (dyingElapsedRef.current >= DYING_PAUSE_MS) {
@@ -67,13 +68,11 @@ export function useGameLoop(
           const newLives = state.lives - 1;
           const newPhase: GameState["phase"] =
             newLives <= 0 ? "game-over" : "playing";
-          const fresh = createInitialState();
-          stateRef.current = {
+          stateRef.current = resetPlayer({
             ...state,
             lives: newLives,
             phase: newPhase,
-            player: fresh.player,
-          };
+          });
           syncReact(stateRef.current);
           if (newPhase === "game-over") {
             rafRef.current = requestAnimationFrame(loop);
@@ -89,6 +88,7 @@ export function useGameLoop(
       if (state.phase === "game-over" || state.phase === "level-complete") {
         renderer.clear();
         renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills);
+        state.ghosts.forEach(g => renderer.drawGhost(g));
         renderer.drawPlayer(state.player);
         syncReact(state);
         return; // no further rAF — loop is stopped
@@ -118,6 +118,7 @@ export function useGameLoop(
         stateRef.current.pellets,
         stateRef.current.powerPills
       );
+      stateRef.current.ghosts.forEach(g => renderer.drawGhost(g));
       renderer.drawPlayer(stateRef.current.player);
 
       syncReact(stateRef.current);
