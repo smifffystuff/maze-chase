@@ -55,7 +55,7 @@ src/
     entities/           # (empty — filled in 02-mvp)
   components/
     GameShell.tsx       # Mounts the canvas, wires hooks, renders HUD overlay
-    RotateOverlay.tsx   # Portrait-mode warning (filled in 05-orientation)
+    RotateOverlay.tsx   # Landscape-mode warning (filled in 05-orientation)
   hooks/
     useGameLoop.ts      # Stub — returns null for now
     useOrientation.ts   # Stub — returns { isPortrait: false } for now

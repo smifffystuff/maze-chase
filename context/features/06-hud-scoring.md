@@ -25,16 +25,17 @@ Add `extraLifeAwarded: boolean` to `GameState` and check in `tickGame`: if score
 
 The HUD is a React layer positioned absolutely over the canvas. It must not interfere with canvas touch events (`pointer-events-none` on the container; only interactive elements like buttons opt back in).
 
-**Landscape layout (the normal state):**
+**Portrait layout (the normal state):**
 ```
-┌─────────────────────────────────────────────┐
-│  SCORE        HI-SCORE        LEVEL         │
-│  004200       012600          03            │
-│                                             │
-│           [canvas game area]                │
-│                                             │
-│  ♥ ♥ ♥                                     │
-└─────────────────────────────────────────────┘
+┌─────────────────────┐
+│  SCORE    HI-SCORE  │
+│  004200   012600    │
+│           LEVEL 03  │
+│                     │
+│  [canvas game area] │
+│                     │
+│  ♥ ♥ ♥              │
+└─────────────────────┘
 ```
 
 - Top bar: score (left), high score (centre), level (right)

@@ -1,28 +1,28 @@
 # 05 — Orientation Handling
 
 ## Goal
-On mobile, force landscape orientation using the Screen Orientation API where available. Where it is not (iOS Safari, Firefox), show a full-screen "please rotate" overlay when portrait is detected. Desktop is unaffected.
+On mobile, force portrait orientation using the Screen Orientation API where available. Where it is not (iOS Safari, Firefox), show a full-screen "please rotate" overlay when landscape is detected. Desktop is unaffected.
 
 ---
 
 ## Hook (`src/hooks/useOrientation.ts`)
 
 ```ts
-export function useOrientation(): { isPortrait: boolean } 
+export function useOrientation(): { isLandscape: boolean } 
 ```
 
 **Logic:**
 1. On mount, detect if the device is likely mobile (`navigator.maxTouchPoints > 0` or user-agent check — prefer `maxTouchPoints`)
-2. If mobile, attempt `screen.orientation.lock('landscape')`:
+2. If mobile, attempt `screen.orientation.lock('portrait')`:
    - If it resolves: orientation is handled natively, no overlay needed
    - If it rejects (or `screen.orientation.lock` doesn't exist): fall through to overlay mode
-3. In overlay mode, subscribe to `window.matchMedia('(orientation: portrait)')` for live changes
-4. Return `{ isPortrait: true }` when in overlay mode and portrait is detected; `false` otherwise
+3. In overlay mode, subscribe to `window.matchMedia('(orientation: landscape)')` for live changes
+4. Return `{ isLandscape: true }` when in overlay mode and landscape is detected; `false` otherwise
 5. On unmount, call `screen.orientation.unlock()` if lock was acquired, and remove media query listener
 
 ```ts
 // Rough implementation shape
-const [isPortrait, setIsPortrait] = useState(false);
+const [isLandscape, setIsLandscape] = useState(false);
 
 useEffect(() => {
   const isMobile = navigator.maxTouchPoints > 0;
@@ -30,12 +30,12 @@ useEffect(() => {
 
   const tryLock = async () => {
     try {
-      await screen.orientation.lock('landscape');
+      await screen.orientation.lock('portrait');
     } catch {
       // Lock not supported — use overlay fallback
-      const mq = window.matchMedia('(orientation: portrait)');
-      const handler = (e: MediaQueryListEvent) => setIsPortrait(e.matches);
-      setIsPortrait(mq.matches);
+      const mq = window.matchMedia('(orientation: landscape)');
+      const handler = (e: MediaQueryListEvent) => setIsLandscape(e.matches);
+      setIsLandscape(mq.matches);
       mq.addEventListener('change', handler);
       return () => mq.removeEventListener('change', handler);
     }
@@ -50,7 +50,7 @@ useEffect(() => {
 
 ## Component (`src/components/RotateOverlay.tsx`)
 
-Rendered in `GameShell.tsx` on top of the canvas when `isPortrait === true`.
+Rendered in `GameShell.tsx` on top of the canvas when `isLandscape === true`.
 
 **Design requirements:**
 - Full-viewport fixed overlay (`position: fixed; inset: 0`)
@@ -82,18 +82,18 @@ Use a simple inline SVG for the rotate icon to avoid external asset dependency. 
 ## Wiring in `GameShell.tsx`
 
 ```tsx
-const { isPortrait } = useOrientation();
+const { isLandscape } = useOrientation();
 
 return (
   <div className="relative w-screen h-screen bg-black overflow-hidden">
     <canvas ref={canvasRef} className="w-full h-full" />
     <Hud ... />
-    {isPortrait && <RotateOverlay />}
+    {isLandscape && <RotateOverlay />}
   </div>
 );
 ```
 
-The game loop should pause when `isPortrait` is true (pass it into `useGameLoop` and skip `requestAnimationFrame` scheduling while paused).
+The game loop should pause when `isLandscape` is true (pass it into `useGameLoop` and skip `requestAnimationFrame` scheduling while paused).
 
 ---
 
@@ -105,8 +105,8 @@ The game loop should pause when `isPortrait` is true (pass it into `useGameLoop`
 ---
 
 ## Acceptance Criteria
-- [ ] On Android Chrome: orientation locks to landscape automatically; overlay never appears
-- [ ] On iOS Safari (simulated): overlay appears in portrait, disappears on rotate
+- [ ] On Android Chrome: orientation locks to portrait automatically; overlay never appears
+- [ ] On iOS Safari (simulated): overlay appears in landscape, disappears on rotate back to portrait
 - [ ] On desktop: neither lock nor overlay activates regardless of window shape
 - [ ] Overlay covers the full screen and blocks all touch input
 - [ ] Game loop pauses while overlay is visible and resumes on hide
