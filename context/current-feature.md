@@ -1,34 +1,16 @@
-# Current Feature: Audio & Haptics
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Pellet collection plays a short blip (~880 Hz, 40 ms)
-- Power pill plays a rising sweep (200→600 Hz, 200 ms); frightened ambient tone starts
-- Frightened ambient stops when all ghosts recover or are eaten
-- Siren plays during normal gameplay; switches to frightened tone during power pill
-- Ghost eaten plays a descending sweep with correct score combo sound
-- Player death plays a descending chromatic sequence; all ambient sounds stop during it
-- Level complete plays an ascending arpeggio (~1.5 s)
-- No audio plays before a user gesture (no browser autoplay policy violations)
-- Vibration fires on pellet (10 ms), death (pattern), and ghost eaten — verified on Android Chrome
-- All audio stops/suspends when the browser tab is hidden
-- Setting `audioEngine.enabled = false` silences everything immediately
+<!-- bullet points of what success looks like -->
 
 ## Notes
 
-- All sounds are synthesised via Web Audio API — no audio file assets required
-- `AudioEngine` class lives in `src/game/audio/audioEngine.ts`
-- `haptics` object lives in `src/game/audio/haptics.ts`
-- `AudioContext` must be created lazily on first user gesture (init() method)
-- Suspend/resume context on `visibilitychange` event
-- Ambient loops (siren / frightened) use looping `OscillatorNode` with LFO modulating frequency
-- One-shot sounds use oscillator + gain with exponential ramp to 0.001
-- Haptics always guarded with `navigator.vibrate?.()` — not available on iOS or desktop
-- Settings integration (enabled flags) defaults to `true` for now; fully wired in step 08
+<!-- additional context, constraints, or details from spec -->
 
 ## History
 
@@ -49,3 +31,6 @@ On mobile, attempts `screen.orientation.lock('portrait')` on mount; on success o
 
 ### 06 — HUD & Scoring
 Complete HUD rebuild with four new components. `ScoreBar` (3-column grid: score / hi-score / level, zero-padded). `LivesDisplay` (SVG Pac-Man arc icons, max 5 shown, ×N overflow). `GameOverOverlay` (custom full-screen, no Dialog focus-trap: "GAME OVER", final score, hi-score with "NEW BEST!" badge, "PLAY AGAIN" button). `LevelCompleteOverlay` ("LEVEL COMPLETE", score, auto-advances after 3 s or manual "NEXT LEVEL" button). `Hud` rewritten as a `pointer-events-none` composition root that mounts overlays with `pointer-events-auto`. Engine: `extraLifeAwarded: boolean` added to `GameState`; extra life awarded once when score crosses 10,000 pts in `tickGame`. `useGameLoop` now returns `level`. `highScore` held in `GameShell` session state, updated on game-over phase. Build and type-check clean.
+
+### 07 — Audio & Haptics
+All sounds synthesised via Web Audio API — no audio file assets. `AudioEngine` class (`src/game/audio/audioEngine.ts`): lazy `AudioContext` init on first user gesture (keydown/pointerdown), `visibilitychange` suspend/resume, one-shot methods (`playBlip` 880 Hz/40 ms, `playPowerPill` rising 200→600 Hz sweep, `playGhostEaten` descending 600→100 Hz sweep, `playDeath` 12-step chromatic descent ~1 s, `playLevelComplete` C-major arpeggio ~1.5 s), LFO-modulated ambient loops (`startSiren`/`stopSiren` at 440 Hz/gain 0.03, `startFrightened`/`stopFrightened` at 180 Hz/gain 0.04). `enabled` getter/setter silences everything immediately when set false. `haptics` object (`src/game/audio/haptics.ts`) with `navigator.vibrate?.()` guards for pellet (10 ms), power pill, ghost eaten, and death patterns. `useGameLoop` diffs consecutive `GameState` pairs via `processAudio()` to fire events; siren restarts after dying→playing transition and on `restart()`. Build and type-check clean.
