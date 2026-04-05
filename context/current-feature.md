@@ -6,11 +6,11 @@ Not Started
 
 ## Goals
 
-<!-- Goals will be populated by /feature load -->
+<!-- bullet points of what success looks like -->
 
 ## Notes
 
-<!-- Notes will be populated by /feature load -->
+<!-- additional context, constraints, or details from spec -->
 
 ## History
 
@@ -22,3 +22,6 @@ Full game loop with no ghosts. 28×31 maze grid with walls, pellets, power-pills
 
 ### 03 — Ghost AI
 Four ghosts with distinct chase personalities: Blinky (direct pursuit), Pinky (4-tiles-ahead ambush), Inky (mirror of Blinky through 2-tile pivot), Clyde (chases when far, retreats when close). Tile-based pathfinding — at each tile centre choose exit minimising Euclidean distance to target, no mid-corridor reversals. Classic level-1 scatter/chase schedule (scatter 7s → chase 20s × 2 → scatter 5s × 2 → chase ∞). Staggered ghost-house release: Blinky immediately, others at 2/4/6 s. Player collision with non-frightened ghost → dying phase. Ghost D-shape renderer with directional eyes. `GhostMode` type includes `frightened`/`eaten` stubs for feature 04. Also fixed game-over button visibility (light-on-light). Build and type-check clean.
+
+### 04 — Power Pills & Frightened State
+Power pill collection turns all ghosts blue/frightened, reverses direction, and slows them (speed 4). Player can eat frightened ghosts for escalating combo scores (200/400/800/1600); `ghostEatCombo` resets on player death. Eaten ghosts become eyes-only and pathfind back to ghost house via corridors at speed 12. Ghosts flash blue/white in the final 2 seconds of frightened state. Frightened mode restores the correct scatter/chase phase on expiry. Score pop-ups appear at eaten ghost positions with a brief game pause (~500 ms). New engine file `powerPill.ts` with `applyPowerPill` and `tickFrightened`. Build and type-check clean.

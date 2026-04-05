@@ -1,4 +1,4 @@
-import { COLS, GHOST_HOUSE_EXIT, GHOST_SPEED, ROWS, TILE_SIZE } from '../data/constants';
+import { COLS, EATEN_SPEED, FRIGHTENED_SPEED, GHOST_HOUSE_EXIT, GHOST_SPEED, ROWS, TILE_SIZE } from '../data/constants';
 import { MazeGrid } from '../data/maze';
 import { Direction, GhostMode, GhostState, PlayerState, Vec2 } from './types';
 
@@ -126,6 +126,22 @@ export function chooseDirection(
   return best === 'none' ? direction : best;
 }
 
+// Pick a random valid exit direction (not reverse, not wall).
+function chooseFrightenedDirection(ghost: GhostState, maze: MazeGrid): Direction {
+  const { tile, direction } = ghost;
+  const forbidden = REVERSE[direction];
+  const valid: Direction[] = [];
+
+  for (const d of DIRECTIONS) {
+    if (d === forbidden) continue;
+    const next = { x: wrapCol(tile.x + DELTAS[d].x), y: tile.y + DELTAS[d].y };
+    if (isPassable(next, maze)) valid.push(d);
+  }
+
+  if (valid.length === 0) return direction;
+  return valid[Math.floor(Math.random() * valid.length)];
+}
+
 // Advance a ghost by dt seconds. Returns new GhostState.
 export function tickGhost(
   ghost: GhostState,
@@ -135,7 +151,11 @@ export function tickGhost(
 ): GhostState {
   let { pixel, tile, direction, inHouse } = ghost;
 
-  const speed = GHOST_SPEED * TILE_SIZE; // px/s
+  const speedTilesPerSec =
+    ghost.mode === 'frightened' ? FRIGHTENED_SPEED :
+    ghost.mode === 'eaten'      ? EATEN_SPEED :
+    GHOST_SPEED;
+  const speed = speedTilesPerSec * TILE_SIZE; // px/s
   let remaining = speed * dt;
 
   // If ghost has no direction yet, pick one immediately
@@ -166,8 +186,17 @@ export function tickGhost(
         inHouse = false;
       }
 
+      // Eaten ghost arrives home — re-enter house and clear eaten state
+      if (ghost.mode === 'eaten' && tile.x === GHOST_HOUSE_EXIT.col && tile.y === GHOST_HOUSE_EXIT.row) {
+        return { ...ghost, pixel, tile, direction, inHouse: true, eaten: false };
+      }
+
       // Choose next direction at new tile centre
-      direction = chooseDirection({ ...ghost, tile, direction, inHouse }, target, maze);
+      const partialGhost: GhostState = { ...ghost, tile, direction, inHouse };
+      direction =
+        ghost.mode === 'frightened'
+          ? chooseFrightenedDirection(partialGhost, maze)
+          : chooseDirection(partialGhost, target, maze);
       if (direction === 'none') {
         remaining = 0;
       }

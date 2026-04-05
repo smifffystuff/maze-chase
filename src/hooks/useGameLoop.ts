@@ -62,6 +62,7 @@ export function useGameLoop(
         renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills);
         state.ghosts.forEach(g => renderer.drawGhost(g));
         renderer.drawPlayer(state.player);
+        renderer.drawScorePopups(state.scorePopups);
 
         if (dyingElapsedRef.current >= DYING_PAUSE_MS) {
           dyingElapsedRef.current = 0;
@@ -90,6 +91,7 @@ export function useGameLoop(
         renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills);
         state.ghosts.forEach(g => renderer.drawGhost(g));
         renderer.drawPlayer(state.player);
+        renderer.drawScorePopups(state.scorePopups);
         syncReact(state);
         return; // no further rAF — loop is stopped
       }
@@ -120,6 +122,7 @@ export function useGameLoop(
       );
       stateRef.current.ghosts.forEach(g => renderer.drawGhost(g));
       renderer.drawPlayer(stateRef.current.player);
+      renderer.drawScorePopups(stateRef.current.scorePopups);
 
       syncReact(stateRef.current);
 

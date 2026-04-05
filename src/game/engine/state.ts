@@ -55,6 +55,9 @@ function initialGhosts(): GhostState[] {
       scatterCorner: { x: 25, y: 0 },
       inHouse: false,
       releaseDelay: 0,
+      frightenedTimer: 0,
+      flashingTimer: 0,
+      eaten: false,
     },
     {
       name: 'pinky',
@@ -66,6 +69,9 @@ function initialGhosts(): GhostState[] {
       scatterCorner: { x: 2, y: 0 },
       inHouse: true,
       releaseDelay: 2000,
+      frightenedTimer: 0,
+      flashingTimer: 0,
+      eaten: false,
     },
     {
       name: 'inky',
@@ -77,6 +83,9 @@ function initialGhosts(): GhostState[] {
       scatterCorner: { x: 27, y: 30 },
       inHouse: true,
       releaseDelay: 4000,
+      frightenedTimer: 0,
+      flashingTimer: 0,
+      eaten: false,
     },
     {
       name: 'clyde',
@@ -88,6 +97,9 @@ function initialGhosts(): GhostState[] {
       scatterCorner: { x: 0, y: 30 },
       inHouse: true,
       releaseDelay: 6000,
+      frightenedTimer: 0,
+      flashingTimer: 0,
+      eaten: false,
     },
   ];
 }
@@ -106,9 +118,21 @@ export function createInitialState(maze: MazeGrid = MAZE_LEVEL_1): GameState {
     phase: 'playing',
     modeElapsed: 0,
     currentGhostMode: 'scatter',
+    ghostEatCombo: 0,
+    freezeTimer: 0,
+    scorePopups: [],
   };
 }
 
 export function resetPlayer(state: GameState): GameState {
-  return { ...state, player: initialPlayer(), ghosts: initialGhosts(), modeElapsed: 0, currentGhostMode: 'scatter' };
+  return {
+    ...state,
+    player: initialPlayer(),
+    ghosts: initialGhosts(),
+    modeElapsed: 0,
+    currentGhostMode: 'scatter',
+    ghostEatCombo: 0,
+    freezeTimer: 0,
+    scorePopups: [],
+  };
 }

@@ -7,6 +7,13 @@ export const PELLET_SCORE = 10;
 export const POWER_PILL_SCORE = 50;
 
 export const GHOST_SPEED = 6.5;                         // tiles per second
+export const FRIGHTENED_SPEED = 4;                      // tiles per second (slower)
+export const EATEN_SPEED = 12;                          // tiles per second (rushing home)
 export const SCATTER_DURATION = 7000;                   // ms
 export const CHASE_DURATION = 20000;                    // ms
 export const GHOST_HOUSE_EXIT = { col: 13, row: 11 };   // gate tile above ghost house
+export const FRIGHTENED_DURATION = 8000;                // ms
+export const FRIGHTENED_FLASH_START = 2000;             // ms before end when flashing begins
+export const GHOST_EAT_SCORES = [200, 400, 800, 1600];  // per ghost in a combo
+export const GHOST_EAT_FREEZE = 500;                    // ms game freeze after eating a ghost
+export const SCORE_POPUP_DURATION = 500;                // ms score popup is visible
