@@ -1,30 +1,16 @@
-# Current Feature: Settings & Persistence
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- High score survives a full page reload
-- Sound and haptics toggle states survive a full page reload
-- Settings Sheet opens without pausing audio mid-note (pause the game loop, not the audio context)
-- Toggling sound off silences in-game audio immediately
-- Toggling haptics off stops vibration immediately
-- Haptics toggle is hidden on desktop
-- Corrupt or missing localStorage data falls back to defaults without throwing
-- Reset High Score button clears only the score, not sound/haptics settings
-- Settings icon button in HUD has `pointer-events-auto`
+<!-- bullet points of what success looks like -->
 
 ## Notes
 
-- localStorage key: `maze-chase:v1` with `{ highScore, settings: { soundEnabled, hapticsEnabled } }`
-- Always wrap localStorage access in try/catch (private-browsing / storage-full safety)
-- `usePersistedState<T>(key, defaultValue)` — SSR-safe, validates JSON shape before use, falls back to default
-- `useSettings()` hook wraps persisted state; expose via `SettingsProvider` in `layout.tsx`
-- Move `highScore` from `GameShell` into `useSettings`; pass `soundEnabled`/`hapticsEnabled` down to `useGameLoop`
-- `SettingsSheet` uses shadcn `<Sheet>` + `<Switch>`; opening it pauses the game loop via `onPause`/`onResume` callbacks
-- New shadcn components needed: `sheet`, `switch`
+<!-- additional context, constraints, or details from spec -->
 
 ## History
 
@@ -48,3 +34,6 @@ Complete HUD rebuild with four new components. `ScoreBar` (3-column grid: score 
 
 ### 07 — Audio & Haptics
 All sounds synthesised via Web Audio API — no audio file assets. `AudioEngine` class (`src/game/audio/audioEngine.ts`): lazy `AudioContext` init on first user gesture (keydown/pointerdown), `visibilitychange` suspend/resume, one-shot methods (`playBlip` 880 Hz/40 ms, `playPowerPill` rising 200→600 Hz sweep, `playGhostEaten` descending 600→100 Hz sweep, `playDeath` 12-step chromatic descent ~1 s, `playLevelComplete` C-major arpeggio ~1.5 s), LFO-modulated ambient loops (`startSiren`/`stopSiren` at 440 Hz/gain 0.03, `startFrightened`/`stopFrightened` at 180 Hz/gain 0.04). `enabled` getter/setter silences everything immediately when set false. `haptics` object (`src/game/audio/haptics.ts`) with `navigator.vibrate?.()` guards for pellet (10 ms), power pill, ghost eaten, and death patterns. `useGameLoop` diffs consecutive `GameState` pairs via `processAudio()` to fire events; siren restarts after dying→playing transition and on `restart()`. Build and type-check clean.
+
+### 08 — Settings & Persistence
+High score and sound/haptics preferences persisted to `localStorage` under key `maze-chase:v1`. `usePersistedState<T>` generic hook (`src/hooks/usePersistedState.ts`): SSR-safe init, try/catch around all storage access, structural type-guard validator with fallback to defaults. `useSettings` hook + `SettingsProvider` React context (`src/hooks/useSettings.ts`): exposes `soundEnabled`, `hapticsEnabled`, `highScore`, `toggleSound`, `toggleHaptics`, `updateHighScore`, `resetHighScore`; provider placed in `layout.tsx`. `highScore` moved from `GameShell` session state into `useSettings`. `useGameLoop` extended with `soundEnabled`/`hapticsEnabled` options — sound wired to `AudioEngine.enabled`, haptics guarded by ref in `processAudio`. `pauseGame`/`resumeGame` returned from `useGameLoop` and called by settings sheet open/close. `SettingsSheet` component (`src/components/SettingsSheet.tsx`): shadcn `<Sheet>` + `<Switch>` for sound and vibration toggles; haptics row hidden on desktop via `navigator.vibrate` detection; high-score display with destructive Reset button; trigger button has `pointer-events-auto`. Build and type-check clean.
