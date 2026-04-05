@@ -1,22 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useGameLoop } from "@/hooks/useGameLoop";
 import { useOrientation } from "@/hooks/useOrientation";
+import { useSettings } from "@/hooks/useSettings";
 import { Hud } from "./Hud";
 import { RotateOverlay } from "./RotateOverlay";
 
 export default function GameShell() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { isLandscape } = useOrientation();
-  const { score, lives, level, phase, restart } = useGameLoop(canvasRef, isLandscape);
-  const [highScore, setHighScore] = useState(0);
+  const { highScore, updateHighScore, soundEnabled, hapticsEnabled } = useSettings();
+  const { score, lives, level, phase, restart, pauseGame, resumeGame } = useGameLoop(
+    canvasRef,
+    { paused: isLandscape, soundEnabled, hapticsEnabled }
+  );
 
   useEffect(() => {
     if (phase === "game-over") {
-      setHighScore(prev => Math.max(prev, score));
+      updateHighScore(score);
     }
-  }, [phase, score]);
+  }, [phase, score, updateHighScore]);
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden flex items-center justify-center">
@@ -32,6 +36,8 @@ export default function GameShell() {
         level={level}
         phase={phase}
         onRestart={restart}
+        onSettingsOpen={pauseGame}
+        onSettingsClose={resumeGame}
       />
       {isLandscape && <RotateOverlay />}
     </div>

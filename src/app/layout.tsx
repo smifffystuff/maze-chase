@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Press_Start_2P } from "next/font/google";
+import { SettingsProvider } from "@/hooks/useSettings";
 import "./globals.css";
 
 const pressStart2P = Press_Start_2P({
@@ -20,7 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={pressStart2P.variable}>
-      <body className="min-h-screen bg-black text-white">{children}</body>
+      <body className="min-h-screen bg-black text-white">
+        <SettingsProvider>{children}</SettingsProvider>
+      </body>
     </html>
   );
 }

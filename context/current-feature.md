@@ -1,16 +1,30 @@
-# Current Feature
+# Current Feature: Settings & Persistence
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- bullet points of what success looks like -->
+- High score survives a full page reload
+- Sound and haptics toggle states survive a full page reload
+- Settings Sheet opens without pausing audio mid-note (pause the game loop, not the audio context)
+- Toggling sound off silences in-game audio immediately
+- Toggling haptics off stops vibration immediately
+- Haptics toggle is hidden on desktop
+- Corrupt or missing localStorage data falls back to defaults without throwing
+- Reset High Score button clears only the score, not sound/haptics settings
+- Settings icon button in HUD has `pointer-events-auto`
 
 ## Notes
 
-<!-- additional context, constraints, or details from spec -->
+- localStorage key: `maze-chase:v1` with `{ highScore, settings: { soundEnabled, hapticsEnabled } }`
+- Always wrap localStorage access in try/catch (private-browsing / storage-full safety)
+- `usePersistedState<T>(key, defaultValue)` — SSR-safe, validates JSON shape before use, falls back to default
+- `useSettings()` hook wraps persisted state; expose via `SettingsProvider` in `layout.tsx`
+- Move `highScore` from `GameShell` into `useSettings`; pass `soundEnabled`/`hapticsEnabled` down to `useGameLoop`
+- `SettingsSheet` uses shadcn `<Sheet>` + `<Switch>`; opening it pauses the game loop via `onPause`/`onResume` callbacks
+- New shadcn components needed: `sheet`, `switch`
 
 ## History
 
