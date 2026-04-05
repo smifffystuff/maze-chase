@@ -1,27 +1,16 @@
-# Current Feature: Orientation Handling
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `useOrientation` hook detects mobile via `navigator.maxTouchPoints > 0` and attempts `screen.orientation.lock('portrait')`; returns `{ isLandscape: boolean }`
-- On lock success: orientation handled natively, overlay never shown
-- On lock failure/unsupported (iOS Safari, Firefox): subscribe to `window.matchMedia('(orientation: landscape)')` and return `isLandscape: true` when landscape detected
-- Cleanup on unmount: unlock orientation if lock was acquired, remove media query listener
-- `RotateOverlay` component renders full-viewport fixed overlay (z-50, black bg, centred rotate icon + text) blocking all touch input
-- Inline SVG rotate icon with slow CSS spin animation (`animate-[spin_3s_linear_infinite]`)
-- Wired into `GameShell.tsx`: render `{isLandscape && <RotateOverlay />}` on top of canvas and HUD
-- Game loop pauses while `isLandscape` is true (pass into `useGameLoop`, skip rAF scheduling)
-- Desktop unaffected: no lock attempt, no overlay
+<!-- bullet points of what success looks like -->
 
 ## Notes
 
-- `screen.orientation.lock` requires a user gesture on some browsers — call from a tap handler on start screen if silent mount fails
-- Do not attempt lock on desktop (avoids console errors from the rejected promise)
-- iOS Safari does not support `screen.orientation.lock` as of 2025 — overlay is the only mechanism for iOS users
-- Acceptance: Android Chrome locks automatically; iOS simulated overlay appears/disappears on rotate; desktop neither locks nor overlays; overlay blocks all touch; game pauses/resumes; no console errors
+<!-- additional context, constraints, or details from spec -->
 
 ## History
 
@@ -36,3 +25,6 @@ Four ghosts with distinct chase personalities: Blinky (direct pursuit), Pinky (4
 
 ### 04 — Power Pills & Frightened State
 Power pill collection turns all ghosts blue/frightened, reverses direction, and slows them (speed 4). Player can eat frightened ghosts for escalating combo scores (200/400/800/1600); `ghostEatCombo` resets on player death. Eaten ghosts become eyes-only and pathfind back to ghost house via corridors at speed 12. Ghosts flash blue/white in the final 2 seconds of frightened state. Frightened mode restores the correct scatter/chase phase on expiry. Score pop-ups appear at eaten ghost positions with a brief game pause (~500 ms). New engine file `powerPill.ts` with `applyPowerPill` and `tickFrightened`. Build and type-check clean.
+
+### 05 — Orientation Handling
+On mobile, attempts `screen.orientation.lock('portrait')` on mount; on success orientation is handled natively with no overlay. On failure (iOS Safari, Firefox, or absent API), subscribes to `matchMedia('(orientation: landscape)')` and shows a full-screen `RotateOverlay` with an inline SVG rotate icon (slow spin animation) and "Rotate your device to play" text. `useOrientation` hook returns `{ isLandscape: boolean }`. Wired into `GameShell` — overlay renders above canvas and HUD; `isLandscape` passed to `useGameLoop` as `paused`, stopping rAF scheduling and resuming with reset timing on un-pause. Desktop is unaffected. Build and type-check clean.
