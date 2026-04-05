@@ -1,16 +1,34 @@
-# Current Feature
+# Current Feature: Audio & Haptics
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- bullet points of what success looks like -->
+- Pellet collection plays a short blip (~880 Hz, 40 ms)
+- Power pill plays a rising sweep (200→600 Hz, 200 ms); frightened ambient tone starts
+- Frightened ambient stops when all ghosts recover or are eaten
+- Siren plays during normal gameplay; switches to frightened tone during power pill
+- Ghost eaten plays a descending sweep with correct score combo sound
+- Player death plays a descending chromatic sequence; all ambient sounds stop during it
+- Level complete plays an ascending arpeggio (~1.5 s)
+- No audio plays before a user gesture (no browser autoplay policy violations)
+- Vibration fires on pellet (10 ms), death (pattern), and ghost eaten — verified on Android Chrome
+- All audio stops/suspends when the browser tab is hidden
+- Setting `audioEngine.enabled = false` silences everything immediately
 
 ## Notes
 
-<!-- additional context, constraints, or details from spec -->
+- All sounds are synthesised via Web Audio API — no audio file assets required
+- `AudioEngine` class lives in `src/game/audio/audioEngine.ts`
+- `haptics` object lives in `src/game/audio/haptics.ts`
+- `AudioContext` must be created lazily on first user gesture (init() method)
+- Suspend/resume context on `visibilitychange` event
+- Ambient loops (siren / frightened) use looping `OscillatorNode` with LFO modulating frequency
+- One-shot sounds use oscillator + gain with exponential ramp to 0.001
+- Haptics always guarded with `navigator.vibrate?.()` — not available on iOS or desktop
+- Settings integration (enabled flags) defaults to `true` for now; fully wired in step 08
 
 ## History
 
