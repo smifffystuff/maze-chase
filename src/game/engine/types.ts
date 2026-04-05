@@ -34,6 +34,7 @@ export interface GhostState {
   releaseDelay: number; // ms from game start before ghost leaves the house
   frightenedTimer: number; // ms remaining in frightened state (0 = not frightened)
   flashingTimer: number;   // > 0 when ghost should flash (about to recover)
+  eaten: boolean;          // true while returning to ghost house as eyes
 }
 
 export interface GameState {
