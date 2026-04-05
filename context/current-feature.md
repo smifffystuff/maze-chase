@@ -1,16 +1,32 @@
-# Current Feature
+# Current Feature: Power Pills & Frightened State
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Goals will be populated by /feature load -->
+- Collecting a power pill turns all non-eaten ghosts blue and they slow down
+- All ghosts reverse direction immediately on power-pill collection
+- Player can eat a blue ghost — it turns to eyes and navigates back to the ghost house
+- Eating multiple ghosts in one pill: scores double each time (200, 400, 800, 1600)
+- Score pop-up appears at the eaten ghost's position for ~500 ms; game briefly pauses
+- Ghosts flash blue/white in the final 2 seconds of frightened state
+- After frightened ends, ghosts resume correct scatter/chase mode (not always scatter)
+- Eaten ghosts follow corridors (no wall phase-through) while returning to ghost house
+- Power pills disappear from the maze on collection
+- `ghostEatCombo` resets when player dies, not just when a new pill is collected
 
 ## Notes
 
-<!-- Notes will be populated by /feature load -->
+- New engine file: `src/game/engine/powerPill.ts` — `applyPowerPill` and `tickFrightened`
+- Extend `GhostState` with `frightenedTimer`, `flashingTimer`, `eaten`
+- Extend `GameState` with `ghostEatCombo`
+- New constants: `FRIGHTENED_DURATION=8000`, `FRIGHTENED_FLASH_START=2000`, `FRIGHTENED_SPEED=4`, `EATEN_SPEED=12`, `GHOST_EAT_SCORES=[200,400,800,1600]`
+- `ghostMovement.ts`: random valid exit for frightened mode; pathfind home for eaten mode
+- `collision.ts`: frightened ghost collision → eaten + combo score; eaten ghost → no effect
+- `renderer.ts`: blue body + smile for frightened; eyes-only for eaten; score pop-up overlay
+- `loop.ts`: integrate power-pill check, `tickFrightened`, extended collision
 
 ## History
 

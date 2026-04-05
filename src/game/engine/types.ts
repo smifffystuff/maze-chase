@@ -16,6 +16,12 @@ export interface PlayerState {
 export type GhostMode = 'scatter' | 'chase' | 'frightened' | 'eaten';
 export type GhostName = 'blinky' | 'pinky' | 'inky' | 'clyde';
 
+export interface ScorePopup {
+  pixel: Vec2;
+  score: number;
+  remaining: number; // ms until it disappears
+}
+
 export interface GhostState {
   name: GhostName;
   tile: Vec2;           // current tile (col, row)
@@ -26,6 +32,9 @@ export interface GhostState {
   scatterCorner: Vec2;  // tile ghost retreats to in scatter mode
   inHouse: boolean;     // true while ghost is still inside the ghost house
   releaseDelay: number; // ms from game start before ghost leaves the house
+  frightenedTimer: number; // ms remaining in frightened state (0 = not frightened)
+  flashingTimer: number;   // > 0 when ghost should flash (about to recover)
+  eaten: boolean;          // true while returning to ghost house as eyes
 }
 
 export interface GameState {
@@ -39,4 +48,7 @@ export interface GameState {
   phase: 'playing' | 'level-complete' | 'game-over' | 'dying';
   modeElapsed: number;        // ms of playing time elapsed (drives scatter/chase cycle)
   currentGhostMode: GhostMode;
+  ghostEatCombo: number;      // ghosts eaten in current power-pill window
+  freezeTimer: number;        // ms remaining in eat-freeze pause
+  scorePopups: ScorePopup[];
 }

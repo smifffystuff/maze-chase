@@ -1,6 +1,6 @@
 import { COLS, ROWS, TILE_SIZE } from '../data/constants';
 import { MazeGrid } from '../data/maze';
-import { Direction, GhostState, PlayerState } from '../engine/types';
+import { Direction, GhostState, PlayerState, ScorePopup } from '../engine/types';
 
 // Wall colour — matches --color-wall token in globals.css
 const WALL_COLOR = '#1a1aff';
@@ -69,14 +69,40 @@ export class Renderer {
     const cx = px + TILE_SIZE / 2;
     const r  = TILE_SIZE / 2 - 1;
 
-    ctx.fillStyle = ghost.colour;
+    // Eaten ghost: eyes only, no body
+    if (ghost.eaten) {
+      this.drawGhostEyes(cx, py + r, r, ghost.direction);
+      return;
+    }
 
-    // Body: D-shape (semicircle top + jagged skirt)
-    ctx.beginPath();
-    ctx.arc(cx, py + r, r, Math.PI, 0); // top half-circle
-    // Jagged skirt: three bumps along the bottom
+    // Frightened: blue body (flashing white/blue in final 2s)
+    if (ghost.mode === 'frightened') {
+      const flashing = ghost.flashingTimer > 0 && Math.floor(ghost.flashingTimer / 200) % 2 === 0;
+      ctx.fillStyle = flashing ? '#ffffff' : '#4444ff';
+      this.drawGhostBody(px, py, cx, r);
+
+      // Simple smile instead of eyes
+      ctx.strokeStyle = flashing ? '#4444ff' : '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, py + r + r * 0.15, r * 0.4, 0, Math.PI);
+      ctx.stroke();
+      return;
+    }
+
+    // Normal ghost
+    ctx.fillStyle = ghost.colour;
+    this.drawGhostBody(px, py, cx, r);
+    this.drawGhostEyes(cx, py + r, r, ghost.direction);
+  }
+
+  private drawGhostBody(px: number, py: number, cx: number, r: number): void {
+    const { ctx } = this;
     const skirtY = py + TILE_SIZE - 1;
     const bump   = r / 1.5;
+
+    ctx.beginPath();
+    ctx.arc(cx, py + r, r, Math.PI, 0);
     ctx.lineTo(px + TILE_SIZE - 1, skirtY);
     ctx.quadraticCurveTo(px + TILE_SIZE - 1 - bump * 0.5, skirtY - bump, px + TILE_SIZE - 1 - bump, skirtY);
     ctx.quadraticCurveTo(cx - bump * 0.5, skirtY - bump, cx, skirtY);
@@ -84,30 +110,44 @@ export class Renderer {
     ctx.lineTo(px + 1, py + r);
     ctx.closePath();
     ctx.fill();
+  }
 
-    // Eyes
+  private drawGhostEyes(cx: number, cy: number, r: number, direction: Direction): void {
+    const { ctx } = this;
     const eyeOffsetX = r * 0.35;
     const eyeOffsetY = -r * 0.1;
     const eyeR = r * 0.28;
     const pupilR = eyeR * 0.55;
-
-    const [dx, dy] = directionDelta(ghost.direction);
+    const [dx, dy] = directionDelta(direction);
 
     for (const side of [-1, 1]) {
       const ex = cx + side * eyeOffsetX;
-      const ey = py + r + eyeOffsetY;
+      const ey = cy + eyeOffsetY;
 
-      // White of eye
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Dark pupil, shifted in direction of travel
       ctx.fillStyle = '#1a1aff';
       ctx.beginPath();
       ctx.arc(ex + dx * eyeR * 0.5, ey + dy * eyeR * 0.5, pupilR, 0, Math.PI * 2);
       ctx.fill();
+    }
+  }
+
+  drawScorePopups(popups: ScorePopup[]): void {
+    const { ctx } = this;
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#00ffff';
+
+    for (const popup of popups) {
+      ctx.fillText(
+        String(popup.score),
+        popup.pixel.x + TILE_SIZE / 2,
+        popup.pixel.y + TILE_SIZE / 2,
+      );
     }
   }
 
