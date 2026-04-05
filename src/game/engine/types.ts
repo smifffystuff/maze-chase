@@ -51,4 +51,5 @@ export interface GameState {
   ghostEatCombo: number;      // ghosts eaten in current power-pill window
   freezeTimer: number;        // ms remaining in eat-freeze pause
   scorePopups: ScorePopup[];
+  extraLifeAwarded: boolean;  // true once extra life has been granted at 10,000 pts
 }

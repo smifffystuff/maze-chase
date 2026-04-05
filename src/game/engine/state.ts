@@ -121,6 +121,7 @@ export function createInitialState(maze: MazeGrid = MAZE_LEVEL_1): GameState {
     ghostEatCombo: 0,
     freezeTimer: 0,
     scorePopups: [],
+    extraLifeAwarded: false,
   };
 }
 
