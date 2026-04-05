@@ -1,16 +1,27 @@
-# Current Feature
+# Current Feature: Orientation Handling
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- bullet points of what success looks like -->
+- `useOrientation` hook detects mobile via `navigator.maxTouchPoints > 0` and attempts `screen.orientation.lock('portrait')`; returns `{ isLandscape: boolean }`
+- On lock success: orientation handled natively, overlay never shown
+- On lock failure/unsupported (iOS Safari, Firefox): subscribe to `window.matchMedia('(orientation: landscape)')` and return `isLandscape: true` when landscape detected
+- Cleanup on unmount: unlock orientation if lock was acquired, remove media query listener
+- `RotateOverlay` component renders full-viewport fixed overlay (z-50, black bg, centred rotate icon + text) blocking all touch input
+- Inline SVG rotate icon with slow CSS spin animation (`animate-[spin_3s_linear_infinite]`)
+- Wired into `GameShell.tsx`: render `{isLandscape && <RotateOverlay />}` on top of canvas and HUD
+- Game loop pauses while `isLandscape` is true (pass into `useGameLoop`, skip rAF scheduling)
+- Desktop unaffected: no lock attempt, no overlay
 
 ## Notes
 
-<!-- additional context, constraints, or details from spec -->
+- `screen.orientation.lock` requires a user gesture on some browsers — call from a tap handler on start screen if silent mount fails
+- Do not attempt lock on desktop (avoids console errors from the rejected promise)
+- iOS Safari does not support `screen.orientation.lock` as of 2025 — overlay is the only mechanism for iOS users
+- Acceptance: Android Chrome locks automatically; iOS simulated overlay appears/disappears on rotate; desktop neither locks nor overlays; overlay blocks all touch; game pauses/resumes; no console errors
 
 ## History
 
