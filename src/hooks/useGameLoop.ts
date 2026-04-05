@@ -7,6 +7,8 @@ import { createInitialState, resetPlayer } from "@/game/engine/state";
 import { tickGame } from "@/game/engine/loop";
 import { createInputManager, InputManager } from "@/game/input/inputManager";
 import { Renderer } from "@/game/render/renderer";
+import { AudioEngine } from "@/game/audio/audioEngine";
+import { haptics } from "@/game/audio/haptics";
 
 const FIXED_DT = 1 / 60; // seconds per simulation step (~16.67 ms)
 const DYING_PAUSE_MS = 1500;
@@ -31,6 +33,7 @@ export function useGameLoop(
   const stateRef = useRef<GameState>(createInitialState());
   const rendererRef = useRef<Renderer | null>(null);
   const inputRef = useRef<InputManager | null>(null);
+  const audioRef = useRef<AudioEngine>(new AudioEngine());
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(-1);
   const accumRef = useRef<number>(0);
@@ -42,6 +45,54 @@ export function useGameLoop(
     setLives(s.lives);
     setLevel(s.level);
     setPhase(s.phase);
+  }, []);
+
+  // Detect game events by diffing states and fire audio/haptics
+  const processAudio = useCallback((prev: GameState, next: GameState) => {
+    const engine = audioRef.current;
+
+    // Pellet collected (not a power pill)
+    if (next.pellets.size < prev.pellets.size && next.powerPills.size === prev.powerPills.size) {
+      engine.playBlip();
+      haptics.pellet();
+    }
+
+    // Power pill collected
+    if (next.powerPills.size < prev.powerPills.size) {
+      engine.playPowerPill();
+      engine.stopSiren();
+      engine.startFrightened();
+    }
+
+    // Ghost newly eaten
+    const newlyEaten = next.ghosts.some((g, i) => g.mode === 'eaten' && prev.ghosts[i]?.mode !== 'eaten');
+    if (newlyEaten) {
+      engine.playGhostEaten();
+      haptics.ghostEaten();
+    }
+
+    // All frightened ghosts have recovered or been eaten — restore siren
+    const prevFrightened = prev.ghosts.some(g => g.mode === 'frightened');
+    const nextFrightened = next.ghosts.some(g => g.mode === 'frightened');
+    if (prevFrightened && !nextFrightened && next.phase === 'playing') {
+      engine.stopFrightened();
+      engine.startSiren();
+    }
+
+    // Player died
+    if (prev.phase !== 'dying' && next.phase === 'dying') {
+      engine.stopSiren();
+      engine.stopFrightened();
+      engine.playDeath();
+      haptics.death();
+    }
+
+    // Level complete
+    if (prev.phase !== 'level-complete' && next.phase === 'level-complete') {
+      engine.stopSiren();
+      engine.stopFrightened();
+      engine.playLevelComplete();
+    }
   }, []);
 
   const loop = useCallback(
@@ -82,6 +133,9 @@ export function useGameLoop(
             phase: newPhase,
           });
           syncReact(stateRef.current);
+          if (newPhase === "playing") {
+            audioRef.current.startSiren();
+          }
           if (newPhase === "game-over") {
             rafRef.current = requestAnimationFrame(loop);
             return;
@@ -116,7 +170,9 @@ export function useGameLoop(
       // Fixed-timestep simulation
       accumRef.current += dt;
       while (accumRef.current >= FIXED_DT) {
+        const prev = stateRef.current;
         stateRef.current = tickGame(stateRef.current, FIXED_DT, MAZE_LEVEL_1);
+        processAudio(prev, stateRef.current);
         accumRef.current -= FIXED_DT;
         if (stateRef.current.phase !== "playing") break;
       }
@@ -159,6 +215,9 @@ export function useGameLoop(
   const restart = useCallback(() => {
     stateRef.current = createInitialState();
     syncReact(stateRef.current);
+    audioRef.current.stopFrightened();
+    audioRef.current.stopSiren();
+    audioRef.current.startSiren();
     start();
   }, [start, syncReact]);
 
@@ -170,6 +229,24 @@ export function useGameLoop(
     inputRef.current = createInputManager(canvas.parentElement ?? document.body);
     start();
 
+    const engine = audioRef.current;
+
+    function handleFirstGesture() {
+      engine.init();
+      const state = stateRef.current;
+      if (state.phase === 'playing') {
+        if (state.ghosts.some(g => g.mode === 'frightened')) {
+          engine.startFrightened();
+        } else {
+          engine.startSiren();
+        }
+      }
+      document.removeEventListener('keydown', handleFirstGesture);
+      document.removeEventListener('pointerdown', handleFirstGesture);
+    }
+    document.addEventListener('keydown', handleFirstGesture);
+    document.addEventListener('pointerdown', handleFirstGesture);
+
     function onResize() {
       rendererRef.current?.scaleToFit(canvas!);
     }
@@ -178,6 +255,9 @@ export function useGameLoop(
     return () => {
       cancelAnimationFrame(rafRef.current);
       inputRef.current?.destroy();
+      engine.destroy();
+      document.removeEventListener('keydown', handleFirstGesture);
+      document.removeEventListener('pointerdown', handleFirstGesture);
       window.removeEventListener("resize", onResize);
     };
   }, [canvasRef, start]);
