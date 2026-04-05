@@ -19,7 +19,8 @@ export interface GameLoopHandle {
 }
 
 export function useGameLoop(
-  canvasRef: RefObject<HTMLCanvasElement | null>
+  canvasRef: RefObject<HTMLCanvasElement | null>,
+  paused = false
 ): GameLoopHandle {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -32,6 +33,7 @@ export function useGameLoop(
   const lastTimeRef = useRef<number>(-1);
   const accumRef = useRef<number>(0);
   const dyingElapsedRef = useRef<number>(0);
+  const pausedRef = useRef(paused);
 
   const syncReact = useCallback((s: GameState) => {
     setScore(s.score);
@@ -41,6 +43,8 @@ export function useGameLoop(
 
   const loop = useCallback(
     (timestamp: number) => {
+      if (pausedRef.current) return; // overlay visible — stop scheduling
+
       const canvas = canvasRef.current;
       const renderer = rendererRef.current;
       const input = inputRef.current;
@@ -130,6 +134,16 @@ export function useGameLoop(
     },
     [canvasRef, syncReact]
   );
+
+  // Sync pausedRef and resume loop when unpausing
+  useEffect(() => {
+    const wasPaused = pausedRef.current;
+    pausedRef.current = paused;
+    if (wasPaused && !paused) {
+      lastTimeRef.current = -1; // reset timing to avoid large dt spike on resume
+      rafRef.current = requestAnimationFrame(loop);
+    }
+  }, [paused, loop]);
 
   const start = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
