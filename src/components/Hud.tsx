@@ -5,6 +5,7 @@ import { ScoreBar } from "./ScoreBar";
 import { LivesDisplay } from "./LivesDisplay";
 import { GameOverOverlay } from "./GameOverOverlay";
 import { LevelCompleteOverlay } from "./LevelCompleteOverlay";
+import { SettingsSheet } from "./SettingsSheet";
 
 export interface HudProps {
   score: number;
@@ -13,13 +14,28 @@ export interface HudProps {
   level: number;
   phase: GameState["phase"];
   onRestart: () => void;
+  onSettingsOpen: () => void;
+  onSettingsClose: () => void;
 }
 
-export function Hud({ score, highScore, lives, level, phase, onRestart }: HudProps) {
+export function Hud({
+  score,
+  highScore,
+  lives,
+  level,
+  phase,
+  onRestart,
+  onSettingsOpen,
+  onSettingsClose,
+}: HudProps) {
   return (
     <div className="absolute inset-0 pointer-events-none select-none">
       <ScoreBar score={score} highScore={highScore} level={level} />
       <LivesDisplay lives={lives} />
+
+      <div className="absolute top-2 right-2">
+        <SettingsSheet onPause={onSettingsOpen} onResume={onSettingsClose} />
+      </div>
 
       {phase === "game-over" && (
         <GameOverOverlay score={score} highScore={highScore} onRestart={onRestart} />

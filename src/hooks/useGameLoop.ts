@@ -19,12 +19,25 @@ export interface GameLoopHandle {
   level: number;
   phase: GameState["phase"];
   restart: () => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
+}
+
+interface GameLoopOptions {
+  paused?: boolean;
+  soundEnabled?: boolean;
+  hapticsEnabled?: boolean;
 }
 
 export function useGameLoop(
   canvasRef: RefObject<HTMLCanvasElement | null>,
-  paused = false
+  options: GameLoopOptions | boolean = false
 ): GameLoopHandle {
+  // Support legacy boolean signature
+  const opts: GameLoopOptions =
+    typeof options === "boolean" ? { paused: options } : options;
+  const { paused = false, soundEnabled = true, hapticsEnabled = true } = opts;
+
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
@@ -39,6 +52,17 @@ export function useGameLoop(
   const accumRef = useRef<number>(0);
   const dyingElapsedRef = useRef<number>(0);
   const pausedRef = useRef(paused);
+  const hapticsEnabledRef = useRef(hapticsEnabled);
+  const sheetPausedRef = useRef(false); // settings sheet pause
+
+  // Sync sound/haptics settings into their respective refs/engine
+  useEffect(() => {
+    audioRef.current.enabled = soundEnabled;
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    hapticsEnabledRef.current = hapticsEnabled;
+  }, [hapticsEnabled]);
 
   const syncReact = useCallback((s: GameState) => {
     setScore(s.score);
@@ -51,10 +75,12 @@ export function useGameLoop(
   const processAudio = useCallback((prev: GameState, next: GameState) => {
     const engine = audioRef.current;
 
+    const h = hapticsEnabledRef.current;
+
     // Pellet collected (not a power pill)
     if (next.pellets.size < prev.pellets.size && next.powerPills.size === prev.powerPills.size) {
       engine.playBlip();
-      haptics.pellet();
+      if (h) haptics.pellet();
     }
 
     // Power pill collected
@@ -68,7 +94,7 @@ export function useGameLoop(
     const newlyEaten = next.ghosts.some((g, i) => g.mode === 'eaten' && prev.ghosts[i]?.mode !== 'eaten');
     if (newlyEaten) {
       engine.playGhostEaten();
-      haptics.ghostEaten();
+      if (h) haptics.ghostEaten();
     }
 
     // All frightened ghosts have recovered or been eaten — restore siren
@@ -84,7 +110,7 @@ export function useGameLoop(
       engine.stopSiren();
       engine.stopFrightened();
       engine.playDeath();
-      haptics.death();
+      if (h) haptics.death();
     }
 
     // Level complete
@@ -97,7 +123,7 @@ export function useGameLoop(
 
   const loop = useCallback(
     (timestamp: number) => {
-      if (pausedRef.current) return; // overlay visible — stop scheduling
+      if (pausedRef.current || sheetPausedRef.current) return;
 
       const canvas = canvasRef.current;
       const renderer = rendererRef.current;
@@ -194,15 +220,27 @@ export function useGameLoop(
     [canvasRef, syncReact]
   );
 
-  // Sync pausedRef and resume loop when unpausing
+  // Sync external pausedRef and resume loop when unpausing (if sheet is not also paused)
   useEffect(() => {
     const wasPaused = pausedRef.current;
     pausedRef.current = paused;
-    if (wasPaused && !paused) {
-      lastTimeRef.current = -1; // reset timing to avoid large dt spike on resume
+    if (wasPaused && !paused && !sheetPausedRef.current) {
+      lastTimeRef.current = -1;
       rafRef.current = requestAnimationFrame(loop);
     }
   }, [paused, loop]);
+
+  const pauseGame = useCallback(() => {
+    sheetPausedRef.current = true;
+  }, []);
+
+  const resumeGame = useCallback(() => {
+    sheetPausedRef.current = false;
+    if (!pausedRef.current) {
+      lastTimeRef.current = -1;
+      rafRef.current = requestAnimationFrame(loop);
+    }
+  }, [loop]);
 
   const start = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -262,5 +300,5 @@ export function useGameLoop(
     };
   }, [canvasRef, start]);
 
-  return { score, lives, level, phase, restart };
+  return { score, lives, level, phase, restart, pauseGame, resumeGame };
 }
