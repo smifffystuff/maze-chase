@@ -62,7 +62,7 @@ export function checkGhostCollision(state: GameState): GameState {
         remaining: SCORE_POPUP_DURATION,
       };
 
-      s = {
+      return {
         ...s,
         ghosts: updatedGhosts,
         score: s.score + points,
@@ -70,7 +70,6 @@ export function checkGhostCollision(state: GameState): GameState {
         freezeTimer: GHOST_EAT_FREEZE,
         scorePopups: [...s.scorePopups, popup],
       };
-      continue;
     }
 
     // Normal ghost — player dies
