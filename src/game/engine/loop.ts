@@ -5,7 +5,7 @@ import { checkGhostCollision, checkPelletCollection } from './collision';
 import { tickModeController } from './modeController';
 import { getTargetTile, tickGhost } from './ghostMovement';
 import { tickFrightened } from './powerPill';
-import { GHOST_HOUSE_EXIT } from '../data/constants';
+import { EXTRA_LIFE_SCORE, GHOST_HOUSE_EXIT } from '../data/constants';
 
 const REVERSE: Record<string, GhostState['direction']> = {
   up: 'down', down: 'up', left: 'right', right: 'left', none: 'none',
@@ -82,5 +82,11 @@ export function tickGame(state: GameState, dt: number, maze: MazeGrid): GameStat
   s = { ...s, ghosts: updatedGhosts, modeElapsed: newModeElapsed, currentGhostMode: newMode, scorePopups };
   s = checkPelletCollection(s, maze);
   s = checkGhostCollision(s);
+
+  // Award extra life once when score crosses EXTRA_LIFE_SCORE
+  if (!s.extraLifeAwarded && s.score >= EXTRA_LIFE_SCORE) {
+    s = { ...s, lives: s.lives + 1, extraLifeAwarded: true };
+  }
+
   return s;
 }

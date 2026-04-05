@@ -17,3 +17,4 @@ export const FRIGHTENED_FLASH_START = 2000;             // ms before end when fl
 export const GHOST_EAT_SCORES = [200, 400, 800, 1600];  // per ghost in a combo
 export const GHOST_EAT_FREEZE = 500;                    // ms game freeze after eating a ghost
 export const SCORE_POPUP_DURATION = 500;                // ms score popup is visible
+export const EXTRA_LIFE_SCORE = 10_000;                 // score threshold for bonus life

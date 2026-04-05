@@ -14,6 +14,7 @@ const DYING_PAUSE_MS = 1500;
 export interface GameLoopHandle {
   score: number;
   lives: number;
+  level: number;
   phase: GameState["phase"];
   restart: () => void;
 }
@@ -24,6 +25,7 @@ export function useGameLoop(
 ): GameLoopHandle {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const [level, setLevel] = useState(1);
   const [phase, setPhase] = useState<GameState["phase"]>("playing");
 
   const stateRef = useRef<GameState>(createInitialState());
@@ -38,6 +40,7 @@ export function useGameLoop(
   const syncReact = useCallback((s: GameState) => {
     setScore(s.score);
     setLives(s.lives);
+    setLevel(s.level);
     setPhase(s.phase);
   }, []);
 
@@ -179,5 +182,5 @@ export function useGameLoop(
     };
   }, [canvasRef, start]);
 
-  return { score, lives, phase, restart };
+  return { score, lives, level, phase, restart };
 }
