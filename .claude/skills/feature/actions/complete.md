@@ -1,7 +1,7 @@
 # Complete Action
 
 1. Stage all changes and commit with a descriptive message
-2. Switch to te develop branch (create if it doesn't exist) and merge the feature branch (no push yet)
+2. Switch to the develop branch (create if it doesn't exist) and merge the feature branch (no push yet)
 3. Delete the local feature branch
 4. Reset current-feature.md:
    - Change H1 back to `# Current Feature`
