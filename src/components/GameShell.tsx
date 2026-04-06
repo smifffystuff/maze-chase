@@ -11,7 +11,7 @@ export default function GameShell() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { isLandscape } = useOrientation();
   const { highScore, updateHighScore, soundEnabled, hapticsEnabled } = useSettings();
-  const { score, lives, level, phase, restart, pauseGame, resumeGame } = useGameLoop(
+  const { score, lives, level, phase, pelletsEaten, ghostsEaten, restart, pauseGame, resumeGame } = useGameLoop(
     canvasRef,
     { paused: isLandscape, soundEnabled, hapticsEnabled }
   );
@@ -35,6 +35,8 @@ export default function GameShell() {
         lives={lives}
         level={level}
         phase={phase}
+        pelletsEaten={pelletsEaten}
+        ghostsEaten={ghostsEaten}
         onRestart={restart}
         onSettingsOpen={pauseGame}
         onSettingsClose={resumeGame}

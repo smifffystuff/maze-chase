@@ -52,4 +52,6 @@ export interface GameState {
   freezeTimer: number;        // ms remaining in eat-freeze pause
   scorePopups: ScorePopup[];
   extraLifeAwarded: boolean;  // true once extra life has been granted at 10,000 pts
+  pelletsEatenThisLevel: number; // regular pellets eaten (for level-complete tally)
+  ghostsEatenThisLevel: number;  // ghosts eaten this level (for level-complete tally)
 }

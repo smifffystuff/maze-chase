@@ -17,7 +17,7 @@ export function GameOverOverlay({ score, highScore, onRestart }: GameOverOverlay
 
   return (
     <div
-      className="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto bg-black/80 gap-6"
+      className="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto bg-black/80 gap-6 opacity-0 animate-[fadeIn_0.5s_ease-in_forwards]"
       style={{ fontFamily: "var(--font-display)" }}
     >
       <p className="text-red-500" style={{ fontSize: "18px", letterSpacing: "0.05em" }}>
