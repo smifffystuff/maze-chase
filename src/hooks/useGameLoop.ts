@@ -10,14 +10,18 @@ import { Renderer } from "@/game/render/renderer";
 import { AudioEngine } from "@/game/audio/audioEngine";
 import { haptics } from "@/game/audio/haptics";
 
-const FIXED_DT = 1 / 60; // seconds per simulation step (~16.67 ms)
-const DYING_PAUSE_MS = 1500;
+const FIXED_DT        = 1 / 60;   // seconds per simulation step (~16.67 ms)
+const DYING_PAUSE_MS  = 1500;
+const COUNTDOWN_MS    = 3500;      // 3–2–1–GO! total duration
+const LEVEL_FLASH_MS  = 1500;      // 3 × 500 ms flashes
 
 export interface GameLoopHandle {
   score: number;
   lives: number;
   level: number;
   phase: GameState["phase"];
+  pelletsEaten: number;
+  ghostsEaten: number;
   restart: () => void;
   pauseGame: () => void;
   resumeGame: () => void;
@@ -33,7 +37,6 @@ export function useGameLoop(
   canvasRef: RefObject<HTMLCanvasElement | null>,
   options: GameLoopOptions | boolean = false
 ): GameLoopHandle {
-  // Support legacy boolean signature
   const opts: GameLoopOptions =
     typeof options === "boolean" ? { paused: options } : options;
   const { paused = false, soundEnabled = true, hapticsEnabled = true } = opts;
@@ -42,62 +45,60 @@ export function useGameLoop(
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [phase, setPhase] = useState<GameState["phase"]>("playing");
+  const [pelletsEaten, setPelletsEaten] = useState(0);
+  const [ghostsEaten, setGhostsEaten] = useState(0);
 
-  const stateRef = useRef<GameState>(createInitialState());
+  const stateRef    = useRef<GameState>(createInitialState());
   const rendererRef = useRef<Renderer | null>(null);
-  const inputRef = useRef<InputManager | null>(null);
-  const audioRef = useRef<AudioEngine>(new AudioEngine());
-  const rafRef = useRef<number>(0);
+  const inputRef    = useRef<InputManager | null>(null);
+  const audioRef    = useRef<AudioEngine>(new AudioEngine());
+  const rafRef      = useRef<number>(0);
   const lastTimeRef = useRef<number>(-1);
-  const accumRef = useRef<number>(0);
-  const dyingElapsedRef = useRef<number>(0);
-  const pausedRef = useRef(paused);
+  const accumRef    = useRef<number>(0);
+
+  // Phase-specific timers
+  const dyingElapsedRef      = useRef<number>(0);
+  const countdownElapsedRef  = useRef<number>(0);
+  const countdownActiveRef   = useRef<boolean>(false);
+  const levelFlashElapsedRef = useRef<number>(0);
+
+  const pausedRef       = useRef(paused);
   const hapticsEnabledRef = useRef(hapticsEnabled);
-  const sheetPausedRef = useRef(false); // settings sheet pause
+  const sheetPausedRef  = useRef(false);
 
-  // Sync sound/haptics settings into their respective refs/engine
-  useEffect(() => {
-    audioRef.current.enabled = soundEnabled;
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    hapticsEnabledRef.current = hapticsEnabled;
-  }, [hapticsEnabled]);
+  useEffect(() => { audioRef.current.enabled = soundEnabled; }, [soundEnabled]);
+  useEffect(() => { hapticsEnabledRef.current = hapticsEnabled; }, [hapticsEnabled]);
 
   const syncReact = useCallback((s: GameState) => {
     setScore(s.score);
     setLives(s.lives);
     setLevel(s.level);
     setPhase(s.phase);
+    setPelletsEaten(s.pelletsEatenThisLevel);
+    setGhostsEaten(s.ghostsEatenThisLevel);
   }, []);
 
-  // Detect game events by diffing states and fire audio/haptics
   const processAudio = useCallback((prev: GameState, next: GameState) => {
     const engine = audioRef.current;
-
     const h = hapticsEnabledRef.current;
 
-    // Pellet collected (not a power pill)
     if (next.pellets.size < prev.pellets.size && next.powerPills.size === prev.powerPills.size) {
       engine.playBlip();
       if (h) haptics.pellet();
     }
 
-    // Power pill collected
     if (next.powerPills.size < prev.powerPills.size) {
       engine.playPowerPill();
       engine.stopSiren();
       engine.startFrightened();
     }
 
-    // Ghost newly eaten
     const newlyEaten = next.ghosts.some((g, i) => g.mode === 'eaten' && prev.ghosts[i]?.mode !== 'eaten');
     if (newlyEaten) {
       engine.playGhostEaten();
       if (h) haptics.ghostEaten();
     }
 
-    // All frightened ghosts have recovered or been eaten — restore siren
     const prevFrightened = prev.ghosts.some(g => g.mode === 'frightened');
     const nextFrightened = next.ghosts.some(g => g.mode === 'frightened');
     if (prevFrightened && !nextFrightened && next.phase === 'playing') {
@@ -105,7 +106,6 @@ export function useGameLoop(
       engine.startSiren();
     }
 
-    // Player died
     if (prev.phase !== 'dying' && next.phase === 'dying') {
       engine.stopSiren();
       engine.stopFrightened();
@@ -113,7 +113,6 @@ export function useGameLoop(
       if (h) haptics.death();
     }
 
-    // Level complete
     if (prev.phase !== 'level-complete' && next.phase === 'level-complete') {
       engine.stopSiren();
       engine.stopFrightened();
@@ -125,39 +124,63 @@ export function useGameLoop(
     (timestamp: number) => {
       if (pausedRef.current || sheetPausedRef.current) return;
 
-      const canvas = canvasRef.current;
+      const canvas   = canvasRef.current;
       const renderer = rendererRef.current;
-      const input = inputRef.current;
+      const input    = inputRef.current;
       if (!canvas || !renderer || !input) return;
 
       if (lastTimeRef.current < 0) lastTimeRef.current = timestamp;
-
-      const rawDt = (timestamp - lastTimeRef.current) / 1000; // seconds
-      const dt = Math.min(rawDt, 0.1); // cap to avoid spiral of death
+      const rawDt = (timestamp - lastTimeRef.current) / 1000;
+      const dt    = Math.min(rawDt, 0.1);
       lastTimeRef.current = timestamp;
+
+      // Advance renderer animation clock every frame
+      renderer.update(dt);
 
       const state = stateRef.current;
 
-      // ── Dying phase: pause then reset ──
-      if (state.phase === "dying") {
-        dyingElapsedRef.current += dt * 1000; // track in ms
+      // ── Countdown phase ────────────────────────────────────────────────
+      if (countdownActiveRef.current) {
+        countdownElapsedRef.current += dt * 1000;
+        const elapsed = countdownElapsedRef.current;
+
+        const text =
+          elapsed < 1000 ? '3' :
+          elapsed < 2000 ? '2' :
+          elapsed < 3000 ? '1' : 'GO!';
 
         renderer.clear();
         renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills);
         state.ghosts.forEach(g => renderer.drawGhost(g));
         renderer.drawPlayer(state.player);
+        renderer.drawCountdown(text);
+
+        if (elapsed >= COUNTDOWN_MS) {
+          countdownActiveRef.current = false;
+          countdownElapsedRef.current = 0;
+          // Start siren after countdown ends
+          audioRef.current.startSiren();
+        }
+
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      // ── Dying phase ────────────────────────────────────────────────────
+      if (state.phase === "dying") {
+        dyingElapsedRef.current += dt * 1000;
+
+        renderer.clear();
+        renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills);
+        state.ghosts.forEach(g => renderer.drawGhost(g));
+        renderer.drawPlayer(state.player, dyingElapsedRef.current);
         renderer.drawScorePopups(state.scorePopups);
 
         if (dyingElapsedRef.current >= DYING_PAUSE_MS) {
           dyingElapsedRef.current = 0;
-          const newLives = state.lives - 1;
-          const newPhase: GameState["phase"] =
-            newLives <= 0 ? "game-over" : "playing";
-          stateRef.current = resetPlayer({
-            ...state,
-            lives: newLives,
-            phase: newPhase,
-          });
+          const newLives  = state.lives - 1;
+          const newPhase: GameState["phase"] = newLives <= 0 ? "game-over" : "playing";
+          stateRef.current = resetPlayer({ ...state, lives: newLives, phase: newPhase });
           syncReact(stateRef.current);
           if (newPhase === "playing") {
             audioRef.current.startSiren();
@@ -172,19 +195,42 @@ export function useGameLoop(
         return;
       }
 
-      // ── Terminal phases: render once and stop ──
-      if (state.phase === "game-over" || state.phase === "level-complete") {
+      // ── Game-over: render once and stop ───────────────────────────────
+      if (state.phase === "game-over") {
         renderer.clear();
         renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills);
         state.ghosts.forEach(g => renderer.drawGhost(g));
         renderer.drawPlayer(state.player);
         renderer.drawScorePopups(state.scorePopups);
         syncReact(state);
-        return; // no further rAF — loop is stopped
+        return;
       }
 
-      // ── Normal playing ──
-      // Apply buffered input direction into nextDirection
+      // ── Level-complete: flash maze then show overlay ───────────────────
+      if (state.phase === "level-complete") {
+        levelFlashElapsedRef.current += dt * 1000;
+        const flashElapsed = levelFlashElapsedRef.current;
+
+        if (flashElapsed < LEVEL_FLASH_MS) {
+          const flashWhite = Math.floor(flashElapsed / 250) % 2 === 1;
+          renderer.clear();
+          renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills, flashWhite);
+          state.ghosts.forEach(g => renderer.drawGhost(g));
+          renderer.drawPlayer(state.player);
+          rafRef.current = requestAnimationFrame(loop);
+          return; // don't syncReact yet — keeps overlay hidden during flash
+        }
+
+        // Flash complete — do final render then stop loop
+        renderer.clear();
+        renderer.drawMaze(MAZE_LEVEL_1, state.pellets, state.powerPills);
+        state.ghosts.forEach(g => renderer.drawGhost(g));
+        renderer.drawPlayer(state.player);
+        syncReact(state); // now phase=level-complete → overlay appears
+        return;
+      }
+
+      // ── Normal playing ────────────────────────────────────────────────
       const dir = input.getDirection();
       if (dir !== "none") {
         stateRef.current = {
@@ -193,7 +239,6 @@ export function useGameLoop(
         };
       }
 
-      // Fixed-timestep simulation
       accumRef.current += dt;
       while (accumRef.current >= FIXED_DT) {
         const prev = stateRef.current;
@@ -204,11 +249,7 @@ export function useGameLoop(
       }
 
       renderer.clear();
-      renderer.drawMaze(
-        MAZE_LEVEL_1,
-        stateRef.current.pellets,
-        stateRef.current.powerPills
-      );
+      renderer.drawMaze(MAZE_LEVEL_1, stateRef.current.pellets, stateRef.current.powerPills);
       stateRef.current.ghosts.forEach(g => renderer.drawGhost(g));
       renderer.drawPlayer(stateRef.current.player);
       renderer.drawScorePopups(stateRef.current.scorePopups);
@@ -217,10 +258,9 @@ export function useGameLoop(
 
       rafRef.current = requestAnimationFrame(loop);
     },
-    [canvasRef, syncReact]
+    [canvasRef, syncReact, processAudio]
   );
 
-  // Sync external pausedRef and resume loop when unpausing (if sheet is not also paused)
   useEffect(() => {
     const wasPaused = pausedRef.current;
     pausedRef.current = paused;
@@ -244,9 +284,12 @@ export function useGameLoop(
 
   const start = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    lastTimeRef.current = -1;
-    accumRef.current = 0;
+    lastTimeRef.current    = -1;
+    accumRef.current       = 0;
     dyingElapsedRef.current = 0;
+    levelFlashElapsedRef.current = 0;
+    countdownElapsedRef.current  = 0;
+    countdownActiveRef.current   = true; // countdown before each game start
     rafRef.current = requestAnimationFrame(loop);
   }, [loop]);
 
@@ -255,7 +298,7 @@ export function useGameLoop(
     syncReact(stateRef.current);
     audioRef.current.stopFrightened();
     audioRef.current.stopSiren();
-    audioRef.current.startSiren();
+    // Siren starts after countdown completes (inside loop)
     start();
   }, [start, syncReact]);
 
@@ -272,7 +315,7 @@ export function useGameLoop(
     function handleFirstGesture() {
       engine.init();
       const state = stateRef.current;
-      if (state.phase === 'playing') {
+      if (state.phase === 'playing' && !countdownActiveRef.current) {
         if (state.ghosts.some(g => g.mode === 'frightened')) {
           engine.startFrightened();
         } else {
@@ -300,5 +343,5 @@ export function useGameLoop(
     };
   }, [canvasRef, start]);
 
-  return { score, lives, level, phase, restart, pauseGame, resumeGame };
+  return { score, lives, level, phase, pelletsEaten, ghostsEaten, restart, pauseGame, resumeGame };
 }

@@ -13,6 +13,8 @@ export interface HudProps {
   lives: number;
   level: number;
   phase: GameState["phase"];
+  pelletsEaten: number;
+  ghostsEaten: number;
   onRestart: () => void;
   onSettingsOpen: () => void;
   onSettingsClose: () => void;
@@ -24,6 +26,8 @@ export function Hud({
   lives,
   level,
   phase,
+  pelletsEaten,
+  ghostsEaten,
   onRestart,
   onSettingsOpen,
   onSettingsClose,
@@ -41,7 +45,7 @@ export function Hud({
         <GameOverOverlay score={score} highScore={highScore} onRestart={onRestart} />
       )}
       {phase === "level-complete" && (
-        <LevelCompleteOverlay score={score} onNext={onRestart} />
+        <LevelCompleteOverlay score={score} pelletsEaten={pelletsEaten} ghostsEaten={ghostsEaten} onNext={onRestart} />
       )}
     </div>
   );

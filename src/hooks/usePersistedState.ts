@@ -17,25 +17,39 @@ export function usePersistedState<T>(
   key: string,
   defaultValue: T
 ): [T, (value: T) => void] {
-  const [state, setState] = useState<T>(() => {
-    if (typeof window === "undefined") return defaultValue;
+  // Always initialise to defaultValue so the first render matches SSR output.
+  const [state, setState] = useState<T>(defaultValue);
+  // `loaded` gates the persist effect so it never runs before the hydration
+  // read is complete — prevents briefly overwriting localStorage with the default.
+  const [loaded, setLoaded] = useState(false);
+
+  // After mount: hydrate from localStorage then mark as loaded.
+  // key and defaultValue are stable call-site constants; empty dep array is intentional.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(key);
-      if (!raw) return defaultValue;
-      const parsed = JSON.parse(raw) as unknown;
-      return hasMatchingShape(parsed, defaultValue) ? parsed : defaultValue;
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown;
+        if (hasMatchingShape(parsed, defaultValue)) {
+          setState(parsed);
+        }
+      }
     } catch {
-      return defaultValue;
+      // storage unavailable — keep default
     }
-  });
+    setLoaded(true);
+  }, []); // mount-only
 
+  // Persist on every state change, but only after the hydration read is done.
   useEffect(() => {
+    if (!loaded) return;
     try {
       localStorage.setItem(key, JSON.stringify(state));
     } catch {
       // storage full or unavailable — ignore
     }
-  }, [key, state]);
+  }, [key, state, loaded]);
 
   return [state, setState];
 }

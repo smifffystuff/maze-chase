@@ -13,7 +13,7 @@ export function checkPelletCollection(state: GameState, maze: MazeGrid): GameSta
     const pellets = new Set(state.pellets);
     pellets.delete(key);
     const phase = pellets.size === 0 ? 'level-complete' : state.phase;
-    return { ...state, pellets, score: state.score + PELLET_SCORE, phase };
+    return { ...state, pellets, score: state.score + PELLET_SCORE, phase, pelletsEatenThisLevel: state.pelletsEatenThisLevel + 1 };
   }
 
   if (tiletype === 'power-pill' && state.powerPills.has(key)) {
@@ -67,6 +67,7 @@ export function checkGhostCollision(state: GameState): GameState {
         ghosts: updatedGhosts,
         score: s.score + points,
         ghostEatCombo: s.ghostEatCombo + 1,
+        ghostsEatenThisLevel: s.ghostsEatenThisLevel + 1,
         freezeTimer: GHOST_EAT_FREEZE,
         scorePopups: [...s.scorePopups, popup],
       };

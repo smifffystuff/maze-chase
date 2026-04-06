@@ -7,13 +7,6 @@ Visual and audio refinements that elevate the game from functional to enjoyable.
 
 ## Player Animation
 
-### Chomp animation
-Currently the player is a static circle. Replace with a proper chomp:
-- Track a `mouthAngle` value in the render layer (not game state — purely cosmetic)
-- Oscillate between 0° and 45° using a sine wave tied to the render frame counter
-- When `player.moving === false`, hold at 0° (fully open)
-- Direction affects which way the mouth faces (rotate the arc)
-
 ### Death animation
 When `phase === 'dying'`:
 - Freeze ghost movement
