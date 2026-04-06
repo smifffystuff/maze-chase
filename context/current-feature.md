@@ -10,7 +10,7 @@ Not Started
 
 ## Notes
 
-<!-- additional context, constraints, or details from spec -->
+<!-- additional context, constraints, or details -->
 
 ## History
 
@@ -37,3 +37,6 @@ All sounds synthesised via Web Audio API — no audio file assets. `AudioEngine`
 
 ### 08 — Settings & Persistence
 High score and sound/haptics preferences persisted to `localStorage` under key `maze-chase:v1`. `usePersistedState<T>` generic hook (`src/hooks/usePersistedState.ts`): SSR-safe init, try/catch around all storage access, structural type-guard validator with fallback to defaults. `useSettings` hook + `SettingsProvider` React context (`src/hooks/useSettings.ts`): exposes `soundEnabled`, `hapticsEnabled`, `highScore`, `toggleSound`, `toggleHaptics`, `updateHighScore`, `resetHighScore`; provider placed in `layout.tsx`. `highScore` moved from `GameShell` session state into `useSettings`. `useGameLoop` extended with `soundEnabled`/`hapticsEnabled` options — sound wired to `AudioEngine.enabled`, haptics guarded by ref in `processAudio`. `pauseGame`/`resumeGame` returned from `useGameLoop` and called by settings sheet open/close. `SettingsSheet` component (`src/components/SettingsSheet.tsx`): shadcn `<Sheet>` + `<Switch>` for sound and vibration toggles; haptics row hidden on desktop via `navigator.vibrate` detection; high-score display with destructive Reset button; trigger button has `pointer-events-auto`. Build and type-check clean.
+
+### 09 — Polish
+Visual and audio refinements with no new gameplay mechanics. Multi-frame death animation over ~1.5 s (mouth closes to full circle) before life decrements; renderer-driven, not new game state. Ghost house bounce: ±4 px sine wave at ~1 Hz with per-ghost phase offsets. Ghost eye pupils smoothly interpolate on direction change. Maze walls: dark blue fill + bright blue inner-edge highlight (1–2 px) + `arcTo` rounded corners. Pellets pulse in brightness (~0.5 Hz); power pills pulse in size (scale ±10%). Level-complete maze flash: walls alternate blue/white 3× before overlay appears. Level-start countdown "3 – 2 – 1 – GO!" rendered on canvas, input blocked, ghosts frozen. Game-over overlay fades in via `transition-opacity duration-500`. Ghost-eaten score pop-ups float upward and fade over 500 ms. Score breakdown tally shown on level-complete screen before auto-advance. Build and type-check clean.
